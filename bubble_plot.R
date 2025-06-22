@@ -1,6 +1,6 @@
+#!/usr/bin/env Rscript
 # bubble_plot.R
 
-#!/usr/bin/env Rscript
 suppressPackageStartupMessages({
   library(optparse)
   library(ggplot2)
@@ -8,21 +8,33 @@ suppressPackageStartupMessages({
 })
 
 option_list <- list(
-  make_option(c("-i","--input"), type="character", help="CSV input"),
-  make_option(c("-o","--output"), type="character", help="PDF/PNG output")
+  make_option(c("-i", "--input"),
+    type = "character",
+    help = "CSV input file (genes/modules × metrics)"
+  ),
+  make_option(c("-o", "--output"),
+    type = "character",
+    help = "Path for output PDF/PNG"
+  )
 )
-opt <- parse_args(OptionParser(option_list=option_list))
+opt <- parse_args(OptionParser(option_list = option_list))
 
-df <- read.csv(opt$input, row.names=1)
-melted <- melt(df, id.vars=c("gene","sample","region"), 
-               measure.vars=c("value1","value2"),
-               variable.name="metric", value.name="val")
+message("[", Sys.time(), "] Reading input: ", opt$input)
+df <- read.csv(opt$input, row.names = 1)
 
-ggplot(melted, aes(x=region, y=gene, size=value1, color=value2)) +
-  geom_point() + theme_minimal() +
-  scale_size_continuous(name="Size") +
-  scale_color_gradient(name="Color") +
+message("[", Sys.time(), "] Melting data frame")
+melted <- melt(df,
+  id.vars = c("gene", "sample", "region"),
+  value.name = "value", variable.name = "metric"
+)
+
+message("[", Sys.time(), "] Building bubble plot")
+p <- ggplot(melted, aes(x = region, y = gene, size = value1, color = value2)) +
+  geom_point() +
   facet_wrap(~sample) +
-  theme(axis.text.y=element_text(size=6))
+  theme_minimal() +
+  labs(size = "Size", color = "Color")
 
-ggsave(opt$output, width=6, height=4)
+message("[", Sys.time(), "] Saving plot to ", opt$output)
+ggsave(opt$output, plot = p, width = 6, height = 4)
+message("[", Sys.time(), "] Done.")
