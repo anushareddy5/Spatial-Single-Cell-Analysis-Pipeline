@@ -148,6 +148,17 @@ python pipeline_runner.py \
   --genes GENE1 GENE2 ... \
   [--out output_dir]
 ```
+**Example:**
+
+```bash
+python pipeline_runner.py \
+  --h5ads gw18_umb1759.h5ad gw20_umb1031.h5ad gw21_umb1932.h5ad \
+  --triples FB123 F1 A-PFC \
+  --triples FB123 O2 A-Occi \
+  --sr FB123-F1 FB123-O2 \
+  --genes CBLN2 SRM RASGRF2 MYOG XYZ123 \
+  --out spatial_analysis_results
+```
 
 This single command will:
 
