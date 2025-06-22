@@ -182,6 +182,4 @@ Outputs are organized under `output_dir/` with clear filenames for each step.
 
 ## References
 
-* Original pipeline: [https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
-
-Add reference: [https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
+[https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
