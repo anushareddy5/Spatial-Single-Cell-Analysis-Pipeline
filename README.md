@@ -1,81 +1,75 @@
 # Spatial Single-Cell Analysis Pipeline
 
-This repository provides a fully parameterized pipeline to reproduce the analysis from the Spatial Single-cell Analysis project using any set of `.h5ad` files, sample–region–area triples, and gene lists.
+This repository offers a generic, fully parameterized pipeline for spatial single-cell expression analysis. You can apply it to any set of `.h5ad` files, sample–region–area triples, and gene lists without altering core logic.
 
-## Overview & Lineage
+## Overview & Workflow
 
-The pipeline consists of four core analysis scripts plus a master driver. They must be run in the following order for each `.h5ad` file:
+Six scripts form the core of this pipeline. They must be executed in the sequence below for each `.h5ad` file:
 
-1. **Violin Plot Generation** (`param_Fig3B_violin.py`)
-2. **Spatial Gene Expression Plots** (`param_Fig3CDE_spatial_plots_genes.py`)
-3. **Expression Heatmaps** (`param_Fig3DE_heatmaps.py`)
-4. **Anterior–Posterior Spatial Plots** (`param_Fig3G_spatial_plots_ap.py`)
-5. **Master Orchestration** (`run_fig3_pipeline.py`)
+1. **Depth Violin Plots** (`depth_violin.py`)
+2. **Spatial Expression Plots** (`spatial_expression_plots.py`)
+3. **Expression Heatmaps** (`expression_heatmaps.py`)
+4. **Anterior–Posterior Spatial Plots** (`ap_spatial_plots.py`)
+5. **Bubble Plot Analysis** (`bubble_plot.R`)
+6. **Pipeline Runner** (`pipeline_runner.py`)
 
-Each script reads a common AnnData object, subsets it by sample and region (and area for violins), and then produces publication-quality figures. The master script calls each of the four analysis steps in sequence, ensuring consistent parameter usage and reproducible output organization.
+Each step reads the same AnnData object, subsets by the appropriate metadata fields, and produces high-quality visual summaries.
 
 ---
 
 ## Prerequisites
 
+### Python dependencies
+
 * Python 3.8+
-* Install dependencies:
+* Install Python libraries:
 
   ```bash
   pip install scanpy matplotlib seaborn matplotlib-scalebar
   ```
-* A directory containing your `.h5ad` files
+
+### R dependencies
+
+* R 4.0+
+
+* Install R packages:
+
+  ```r
+  install.packages(c("ggplot2", "reshape2", "optparse"))
+  ```
+
+* A directory of input `.h5ad` files
+
 * A writable output directory
 
 ---
 
-## Script Descriptions
+## Script Details
 
-### 1. `param_Fig3B_violin.py`
+### 1. `depth_violin.py`
 
-**Purpose**: Generates violin plots of gene expression across cortical depth for selected cell populations.
-
-**Key Features**:
-
-* Subsets cells by `sample`, `region`, and `area` (e.g., `FB123`, `F1`, `A-PFC`).
-* Automatically derives an ordered gene list based on median cortical depth if none is provided.
-* Saves one violin plot per sample–region–area triple.
-
-**Usage**:
+Visualizes expression trends along cortical depth by generating violin plots for selected cell populations.
 
 ```bash
-python param_Fig3B_violin.py \
+python depth_violin.py \
   --h5ad path/to/data.h5ad \
-  --triples SAMPLE REGION AREA \
-  [--triples ...] \
+  --triples SAMPLE REGION AREA [--triples ...] \
   [--genes GENE1 GENE2 ...] \
   [--output output_dir]
 ```
 
-Arguments:
-
-* `--h5ad`: Path to input `.h5ad` file
-* `--triples`: One or more `SAMPLE REGION AREA` triples
-* `--genes`: (Optional) List of genes; if omitted, genes are computed for the first triple
-* `--output`: (Optional) Output directory (default: current folder)
+* **Inputs**: AnnData `.h5ad`, one or more `SAMPLE REGION AREA` triples
+* **Optional**: `--genes` list; if omitted, genes are chosen by median-depth ordering
+* **Output**: PNG violin plot per triple
 
 ---
 
-### 2. `param_Fig3CDE_spatial_plots_genes.py`
+### 2. `spatial_expression_plots.py`
 
-**Purpose**: Creates spatial gene expression plots for a list of genes across multiple sample–region combinations.
-
-**Key Features**:
-
-* Reads the same `.h5ad` and subsets by `sample` and `region`.
-* Scales expression values to a fixed range for comparability.
-* Parallelizes plotting across genes with the `--workers` flag.
-* Adds a scale bar and color legend.
-
-**Usage**:
+Creates spatial feature plots for a list of genes across sample–region combinations.
 
 ```bash
-python param_Fig3CDE_spatial_plots_genes.py \
+python spatial_expression_plots.py \
   --h5ad path/to/data.h5ad \
   --samples SAMPLE-REGION [SAMPLE-REGION ...] \
   --genes GENE1 GENE2 ... \
@@ -84,29 +78,35 @@ python param_Fig3CDE_spatial_plots_genes.py \
   [--output output_dir]
 ```
 
-Arguments:
-
-* `--samples`: List of `SAMPLE-REGION` identifiers (e.g. `FB123-F1`)
-* `--genes`: List of genes to plot
-* `--cmap`: (Optional) Matplotlib colormap (default: `YlGnBu`)
-* `--workers`: (Optional) Number of parallel processes (default: 8)
+* **Inputs**: `.h5ad`, `SAMPLE-REGION` identifiers (e.g., `FB123-F1`), gene list
+* **Options**: `--cmap` (default `YlGnBu`), `--workers` for parallel plotting
+* **Output**: One PNG per (sample–region–gene)
 
 ---
 
-### 3. `param_Fig3DE_heatmaps.py`
+### 3. `expression_heatmaps.py`
 
-**Purpose**: Produces heatmaps of scaled gene expression for each sample–region pair.
-
-**Key Features**:
-
-* Subsets by `sample` and `region`.
-* Scales values to a uniform range.
-* Arranges genes along the y-axis and cells along the x-axis.
-
-**Usage**:
+Produces heatmaps of scaled expression for each sample–region pair.
 
 ```bash
-python param_Fig3DE_heatmaps.py \
+python expression_heatmaps.py \
+  --h5ad path/to/data.h5ad \
+  --samples SAMPLE-REGION [SAMPLE-REGION ...] \
+  --genes GENE1 GENE2 ... \
+  [--output output_dir]
+```
+
+* **Scales**: Zero-centered, max-value clipped
+* **Plot**: Genes on y-axis, cells on x-axis
+
+---
+
+### 4. `ap_spatial_plots.py`
+
+Generates anterior–posterior spatial plots using Scanpy’s `spatial` for each gene.
+
+```bash
+python ap_spatial_plots.py \
   --h5ad path/to/data.h5ad \
   --samples SAMPLE-REGION [SAMPLE-REGION ...] \
   --genes GENE1 GENE2 ... \
@@ -115,64 +115,62 @@ python param_Fig3DE_heatmaps.py \
 
 ---
 
-### 4. `param_Fig3G_spatial_plots_ap.py`
+### 5. `bubble_plot.R`
 
-**Purpose**: Generates anterior–posterior spatial plots (`sc.pl.spatial`) for each gene in each sample–region.
-
-**Key Features**:
-
-* Simple loop over `sample`, `region`, and `genes`.
-* Uses Scanpy’s `spatial` plotting function for Visium-style layouts.
-
-**Usage**:
+Creates bubble plots (e.g., module scores or summary metrics) from a CSV input.
 
 ```bash
-python param_Fig3G_spatial_plots_ap.py \
-  --h5ad path/to/data.h5ad \
-  --samples SAMPLE-REGION [SAMPLE-REGION ...] \
-  --genes GENE1 GENE2 ... \
-  [--output output_dir]
+Rscript bubble_plot.R \
+  --input path/to/summary.csv \
+  --output path/to/bubble_plot.pdf
 ```
+
+* **Input CSV** must contain columns: gene/module, sample, region, value1 (size), value2 (color)
+* **Dependencies**: `ggplot2`, `reshape2`, `optparse`
 
 ---
 
-### 5. `run_fig3_pipeline.py`
+### 6. `pipeline_runner.py`
 
-**Purpose**: Orchestrates the full pipeline by invoking the four scripts in sequence for each provided `.h5ad`.
-
-**Key Features**:
-
-* Accepts multiple `.h5ad` paths.
-* Passes consistent parameters (triples, sample-regions, gene lists) to each step.
-* Creates a unified `output` directory structure.
-
-**Usage**:
+**Minimal one‑line example:**
 
 ```bash
-python run_fig3_pipeline.py \
-  --h5ads file1.h5ad file2.h5ad file3.h5ad \
-  --triples FB123 F1 A-PFC \
-  --triples O2 Occi A-OC \
-  --sr FB123-F1 FB123-O2 \
-  --genes CBLN2 SRM RASGRF2 ... \
-  --out fig3_results
+python pipeline_runner.py --h5ads fileA.h5ad fileB.h5ad --triples SAMPLE REGION AREA --sr SAMPLE-REGION --genes GENE1 GENE2 GENE3 --out output_dir
 ```
 
-This single command will run:
+Orchestrates the entire workflow by calling the above scripts in order for each `.h5ad`.
 
-1. Violin plots for each triple
-2. Spatial plots for each `--sr`
-3. Heatmaps for each `--sr`
-4. AP plots for each `--sr`
+```bash
+python pipeline_runner.py \
+  --h5ads fileA.h5ad fileB.h5ad ... \
+  --triples SAMPLE REGION AREA [--triples ...] \
+  --sr SAMPLE-REGION [--sr ...] \
+  --genes GENE1 GENE2 ... \
+  [--out output_dir]
+```
 
-All outputs are written under `fig3_results/` with filenames reflecting sample, region, and gene.
+This single command will:
+
+1. Generate depth violins
+2. Produce spatial feature plots
+3. Draw expression heatmaps
+4. Create AP spatial plots
+5. (Optionally) run bubble-plot in R if summary CSV is provided
+
+Outputs are organized under `output_dir/` with clear filenames for each step.
 
 ---
 
 ## Tips & Troubleshooting
 
-* Ensure that the `obs` columns `sample`, `region`, `area`, `cortical_depth`, and `H1_annotation` match exactly between your new `.h5ad` files and the code’s filters.
-* If you see memory spikes in spatial plotting, reduce `--workers` in `param_Fig3CDE_spatial_plots_genes.py`.
-* For custom gene ordering, always provide `--genes` to skip the automatic median-depth computation.
+* Ensure metadata fields (`sample`, `region`, `area`, `cortical_depth`, `H1_annotation`) exist in your `.h5ad`.
+* Adjust `--workers` down if memory is limited during spatial plotting.
+* Always specify `--genes` to fix gene order and avoid auto-selection.
 
+*End of README*
 
+## References
+
+* Original pipeline: [https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
+
+Add reference: [https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
