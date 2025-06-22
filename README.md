@@ -4,7 +4,7 @@ This repository offers a generic, fully parameterized pipeline for spatial singl
 
 ## Overview & Workflow
 
-Five scripts form the core of this pipeline. They must be executed in the sequence below for each `.h5ad` file:
+Six scripts form the core of this pipeline. They must be executed in the sequence below for each `.h5ad` file:
 
 1. **Depth Violin Plots** (`depth_violin.py`)
 2. **Spatial Expression Plots** (`spatial_expression_plots.py`)
@@ -19,19 +19,27 @@ Each step reads the same AnnData object, subsets by the appropriate metadata fie
 
 ## Prerequisites
 
-* Python 3.8+ (for the first four scripts)
-* R 4.0+ (for the bubble-plot script)
-* Install Python dependencies:
+### Python dependencies
+
+* Python 3.8+
+* Install Python libraries:
 
   ```bash
   pip install scanpy matplotlib seaborn matplotlib-scalebar
   ```
+
+### R dependencies
+
+* R 4.0+
+
 * Install R packages:
 
   ```r
   install.packages(c("ggplot2", "reshape2", "optparse"))
   ```
+
 * A directory of input `.h5ad` files
+
 * A writable output directory
 
 ---
@@ -40,7 +48,7 @@ Each step reads the same AnnData object, subsets by the appropriate metadata fie
 
 ### 1. `depth_violin.py`
 
-Generates violin plots of expression vs. cortical depth for selected cell populations.
+Visualizes expression trends along cortical depth by generating violin plots for selected cell populations.
 
 ```bash
 python depth_violin.py \
@@ -124,6 +132,12 @@ Rscript bubble_plot.R \
 
 ### 6. `pipeline_runner.py`
 
+**Minimal one‑line example:**
+
+```bash
+python pipeline_runner.py --h5ads fileA.h5ad fileB.h5ad --triples SAMPLE REGION AREA --sr SAMPLE-REGION --genes GENE1 GENE2 GENE3 --out output_dir
+```
+
 Orchestrates the entire workflow by calling the above scripts in order for each `.h5ad`.
 
 ```bash
@@ -154,3 +168,9 @@ Outputs are organized under `output_dir/` with clear filenames for each step.
 * Always specify `--genes` to fix gene order and avoid auto-selection.
 
 *End of README*
+
+## References
+
+* Original pipeline: [https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
+
+Add reference: [https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
