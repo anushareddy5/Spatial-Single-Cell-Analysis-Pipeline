@@ -48,19 +48,26 @@ def make_violin(adata, sample, region, area, genes, depth_col, out_dir):
     mask = (
         (adata.obs['sample'] == sample) &
         (adata.obs['region'] == region) &
-        (adata.obs['area'] == area) &
-        (~adata.obs[depth_col].isna()) &
-        (adata.obs['H1_annotation'].isin(['EN-ET', 'EN-IT', 'EN-Mig']))
+        (adata.obs['area'] == area)
     )
-    sub = adata[mask][:, genes].copy()
-    logging.info(f"  Data subset: {sub.n_obs} cells × {len(genes)} genes")
+    sub = adata[mask].copy()
+    if depth_col not in sub.obs.columns or sub.obs[depth_col].isna().all():
+        logging.warning(
+            f"Depth column `{depth_col}` missing or all-NA for this slice; plotting zeros")
+        depths = np.zeros((sub.n_obs,))
+    else:
+        depths = sub.obs[depth_col].values
 
-    X = sub.X.toarray() if sparse.issparse(sub.X) else sub.X
-    data = [X[:, sub.var_names.get_loc(g)] for g in genes]
+    # build data for each gene
+    X = sub[:, genes].X
+    X = X.toarray() if sparse.issparse(X) else X
+    data = [X[:, i] for i in range(X.shape[1])]
 
+    # create violin plot
     fig, ax = plt.subplots(figsize=(len(genes)*0.3, 4))
     sns.violinplot(data=data, inner="quartile", ax=ax)
     ax.set_xticklabels(genes, rotation=90, fontsize=6)
+    ax.set_ylabel(depth_col)
     ax.set_title(f"{sample} • {region} • {area}")
     fig.tight_layout()
 
@@ -82,20 +89,17 @@ def main():
     parser.add_argument('--genes', nargs='+',
                         help="Explicit gene list; skips auto-selection")
     parser.add_argument('--depth-col', default='cortical_depth',
-                        help="Column in `adata.obs` to use for depth")
+                        help="Column in `adata.obs` to use for depth (fallbacks to zeros)")
     parser.add_argument('--output', default='.', help="Output directory")
     args = parser.parse_args()
     logging.info(f"Arguments: {args}")
 
-    logging.info(f"Loading AnnData from '{args.h5ad}'")
+    # Load data
+    logging.info(f"Loading AnnData from `{args.h5ad}`")
     adata = sc.read(args.h5ad)
-    logging.info(f"Available obs columns: {list(adata.obs.columns)}")
+    logging.info(f"Available obs columns: {adata.obs.columns.tolist()}")
 
-    if args.depth_col not in adata.obs.columns:
-        logging.warning(
-            f"Depth column '{args.depth_col}' not found; skipping violin step.")
-        sys.exit(0)
-
+    # Determine genes
     if args.genes:
         genes = args.genes
         logging.info(f"Using provided gene list ({len(genes)} genes)")
@@ -104,10 +108,10 @@ def main():
         try:
             genes = find_genes(adata, s, r, a, args.depth_col)
         except Exception as e:
-            logging.error(f"Error in find_genes: {e}")
-            logging.warning("Skipping violin step.")
-            sys.exit(0)
+            logging.error(f"Error while auto-finding genes: {e}")
+            sys.exit(1)
 
+    # Plot each triple
     for s, r, a in args.triples:
         make_violin(adata, s, r, a, genes, args.depth_col, args.output)
 
