@@ -48,6 +48,10 @@ Each step reads the same AnnData object, subsets by the appropriate metadata fie
 
 ### 1. `depth_violin.py`
 
+**Optional**: `--depth-col` specifies which `adata.obs` column to use for depth (default: `cortical_depth`).
+
+### 1. `depth_violin.py`
+
 Visualizes expression trends along cortical depth by generating violin plots for selected cell populations.
 
 ```bash
@@ -103,6 +107,10 @@ python expression_heatmaps.py \
 
 ### 4. `ap_spatial_plots.py`
 
+**Optional**: `--spot-size` sets the point size for spatial plots (default: `1.0`).
+
+### 4. `ap_spatial_plots.py`
+
 Generates anterior–posterior spatial plots using Scanpy’s `spatial` for each gene.
 
 ```bash
@@ -132,6 +140,10 @@ Rscript bubble_plot.R \
 
 ### 6. `pipeline_runner.py`
 
+**Optional**: `--depth-col` and `--spot-size` flags align with the underlying scripts and default to `cortical_depth` and `1.0`, respectively.
+
+### 6. `pipeline_runner.py`
+
 **Minimal one‑line example:**
 
 ```bash
@@ -147,17 +159,6 @@ python pipeline_runner.py \
   --sr SAMPLE-REGION [--sr ...] \
   --genes GENE1 GENE2 ... \
   [--out output_dir]
-```
-**Example:**
-
-```bash
-python pipeline_runner.py \
-  --h5ads gw18_umb1759.h5ad gw20_umb1031.h5ad gw21_umb1932.h5ad \
-  --triples FB123 F1 A-PFC \
-  --triples FB123 O2 A-Occi \
-  --sr FB123-F1 FB123-O2 \
-  --genes CBLN2 SRM RASGRF2 MYOG XYZ123 \
-  --out spatial_analysis_results
 ```
 
 This single command will:
