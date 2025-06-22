@@ -22,7 +22,7 @@ def setup_logging():
 
 def find_genes(adata, sample, region, area, depth_col):
     logging.info(
-        f"Finding genes for {sample}–{region}–{area} (depth=`{depth_col}`)")
+        f"Finding genes for {sample}–{region}–{area} using depth `{depth_col}`")
     mask = (
         (adata.obs['sample'] == sample) &
         (adata.obs['region'] == region) &
@@ -31,7 +31,7 @@ def find_genes(adata, sample, region, area, depth_col):
         (adata.obs['H1_annotation'].isin(['EN-ET', 'EN-IT', 'EN-Mig']))
     )
     sub = adata[mask].copy()
-    logging.info(f"  Subset size: {sub.n_obs} cells × {sub.n_vars} genes")
+    logging.info(f"  Subset: {sub.n_obs} cells × {sub.n_vars} genes")
 
     X = sub.X.toarray() if sparse.issparse(sub.X) else sub.X
     df = pd.DataFrame({
@@ -44,7 +44,7 @@ def find_genes(adata, sample, region, area, depth_col):
 
 
 def make_violin(adata, sample, region, area, genes, depth_col, out_dir):
-    logging.info(f"Making violin: {sample}–{region}–{area}")
+    logging.info(f"Making violin for {sample}–{region}–{area}")
     mask = (
         (adata.obs['sample'] == sample) &
         (adata.obs['region'] == region) &
@@ -67,7 +67,7 @@ def make_violin(adata, sample, region, area, genes, depth_col, out_dir):
     fname = f"{out_dir}/{sample}_{region}_{area}_violin.png"
     fig.savefig(fname, dpi=300)
     plt.close(fig)
-    logging.info(f"  Saved violin plot → {fname}")
+    logging.info(f"  Saved → {fname}")
 
 
 def main():
@@ -75,8 +75,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate cortical-depth violin plots"
     )
-    parser.add_argument('--h5ad', required=True,
-                        help="Input AnnData (.h5ad)")
+    parser.add_argument('--h5ad', required=True, help="Input AnnData (.h5ad)")
     parser.add_argument('--triples', nargs=3, action='append',
                         metavar=('SAMPLE', 'REGION', 'AREA'),
                         help="One or more SAMPLE REGION AREA triples")
@@ -84,8 +83,7 @@ def main():
                         help="Explicit gene list; skips auto-selection")
     parser.add_argument('--depth-col', default='cortical_depth',
                         help="Column in `adata.obs` to use for depth")
-    parser.add_argument('--output', default='.',
-                        help="Directory for output PNGs")
+    parser.add_argument('--output', default='.', help="Output directory")
     args = parser.parse_args()
     logging.info(f"Arguments: {args}")
 
@@ -93,15 +91,11 @@ def main():
     adata = sc.read(args.h5ad)
     logging.info(f"Available obs columns: {list(adata.obs.columns)}")
 
-    # If depth column missing, skip gracefully
     if args.depth_col not in adata.obs.columns:
         logging.warning(
-            f"Depth column '{args.depth_col}' not found; "
-            "skipping violin step."
-        )
+            f"Depth column '{args.depth_col}' not found; skipping violin step.")
         sys.exit(0)
 
-    # Gene list: either user-specified or derived
     if args.genes:
         genes = args.genes
         logging.info(f"Using provided gene list ({len(genes)} genes)")
@@ -114,7 +108,6 @@ def main():
             logging.warning("Skipping violin step.")
             sys.exit(0)
 
-    # Generate violins
     for s, r, a in args.triples:
         make_violin(adata, s, r, a, genes, args.depth_col, args.output)
 

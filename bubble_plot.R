@@ -8,14 +8,8 @@ suppressPackageStartupMessages({
 })
 
 option_list <- list(
-  make_option(c("-i", "--input"),
-    type = "character",
-    help = "CSV input file (genes/modules × metrics)"
-  ),
-  make_option(c("-o", "--output"),
-    type = "character",
-    help = "Path for output PDF/PNG"
-  )
+  make_option(c("-i", "--input"), type = "character", help = "CSV input file"),
+  make_option(c("-o", "--output"), type = "character", help = "PDF/PNG output")
 )
 opt <- parse_args(OptionParser(option_list = option_list))
 
@@ -25,7 +19,7 @@ df <- read.csv(opt$input, row.names = 1)
 message("[", Sys.time(), "] Melting data frame")
 melted <- melt(df,
   id.vars = c("gene", "sample", "region"),
-  value.name = "value", variable.name = "metric"
+  variable.name = "metric", value.name = "value"
 )
 
 message("[", Sys.time(), "] Building bubble plot")

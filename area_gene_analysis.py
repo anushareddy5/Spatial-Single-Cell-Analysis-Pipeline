@@ -3,8 +3,8 @@
 
 from anndata import read_h5ad
 import scanpy as sc
-import numpy as np
 import pandas as pd
+import numpy as np
 import logging
 import argparse
 import os
@@ -25,30 +25,28 @@ def change_name(name):
 
 def expr_tot(adata):
     areas = np.unique(adata.obs['area'])
-    logging.info(f"Computing mean expression for areas: {list(areas)}")
+    logging.info(f"Computing mean expression for areas: {areas}")
     mat = [adata[adata.obs['area'] == a].X.mean(axis=0) for a in areas]
-    df = pd.DataFrame(np.array(mat).T, index=adata.var.index, columns=areas)
-    return df
+    return pd.DataFrame(np.array(mat).T, index=adata.var.index, columns=areas)
 
 
 def prop_tot(adata):
     areas = np.unique(adata.obs['area'])
-    logging.info(f"Computing detection proportion for areas: {list(areas)}")
+    logging.info(f"Computing detection proportion for areas: {areas}")
     mat = [np.mean(adata[adata.obs['area'] == a].X != 0, axis=0)
            for a in areas]
-    df = pd.DataFrame(np.array(mat).T, index=adata.var.index, columns=areas)
-    return df
+    return pd.DataFrame(np.array(mat).T, index=adata.var.index, columns=areas)
 
 
-def run_de(adata, groupby, group, reference, n_top, prefix, expr_df, prop_df):
-    logging.info(f"Running DE: {group} vs {reference} ({groupby})")
+def run_de(adata, groupby, group, ref, top_n, prefix, expr_df, prop_df):
+    logging.info(f"DE: {group} vs {ref} ({groupby})")
     ad = adata.copy()
     sc.tl.rank_genes_groups(ad, groupby, method='t-test',
-                            groups=[group], reference=reference)
-    names = pd.DataFrame(ad.uns['rank_genes_groups']['names'][:n_top])
+                            groups=[group], reference=ref)
+    names = pd.DataFrame(ad.uns['rank_genes_groups']['names'][:top_n])
     expr_df.loc[names[group], :].to_csv(f"{prefix}_expr_{group}.csv")
     prop_df.loc[names[group], :].to_csv(f"{prefix}_prop_{group}.csv")
-    logging.info(f"Saved DE CSVs with prefix '{prefix}'")
+    logging.info(f"Saved DE files with prefix '{prefix}'")
 
 
 def main():
@@ -56,8 +54,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Area-wise expression & DE analysis"
     )
-    parser.add_argument('--h5ad', required=True)
-    parser.add_argument('--outdir', default='result/DEG')
+    parser.add_argument('--h5ad', required=True, help="Input .h5ad")
+    parser.add_argument('--outdir', default='result/DEG', help="Output folder")
     args = parser.parse_args()
 
     logging.info(f"Loading AnnData: {args.h5ad}")
@@ -70,6 +68,7 @@ def main():
         ['EN-IT', 'EN-ET'])].copy()
 
     os.makedirs(args.outdir, exist_ok=True)
+
     zs_tot = expr_tot(adata_sub)[['PFC', 'M1', 'Par', 'Temp', 'V2', 'V1']]
     pr_tot = prop_tot(adata_sub)[['PFC', 'M1', 'Par', 'Temp', 'V2', 'V1']]
 
@@ -88,7 +87,7 @@ def main():
     run_de(adata_sub[adata_sub.obs['direction'] != '-1'],
            'direction', 'Temp', 'N', 20, f"{args.outdir}/Temp", zs_tot, pr_tot)
 
-    # by H1_annotation classes
+    # by H1 classes
     for cls in ["EN-Mig", "RG", "IPC", "IN"]:
         sub = adata[adata.obs['H1_annotation'] == cls]
         zs = expr_tot(sub)[['PFC', 'M1', 'Par', 'Temp', 'V2', 'V1']]
