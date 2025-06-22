@@ -172,6 +172,38 @@ Outputs are organized under `output_dir/` with clear filenames for each step.
 
 ---
 
+## Checking Gene Presence and Identifying Sample–Region–Area Triples
+
+To ensure a gene is present in your `.h5ad` and to discover which sample–region–area combinations actually express it, run this Python snippet:
+
+```python
+import scanpy as sc
+import numpy as np
+
+# 1. Load your AnnData
+adata = sc.read("path/to/data.h5ad")
+
+# 2. Specify the gene to check
+gene = "PANX1"
+
+# 3. Verify the gene is in var_names
+if gene not in adata.var_names:
+    print(f"{gene} not found in this dataset.")
+else:
+    print(f"{gene} found. Identifying expressing cells...")
+    # 4. Subset to cells with expression > 0
+    expr = adata[:, gene].X
+    expr = expr.toarray().flatten() if hasattr(expr, "toarray") else expr.flatten()
+    cells_idx = np.where(expr > 0)[0]
+    adata_pos = adata[cells_idx].copy()
+    # 5. List unique sample-region-area triples
+    combos = adata_pos.obs[['sample','region','area']].drop_duplicates()
+    print("Sample–Region–Area combinations with", gene, "> 0:")
+    print(combos.to_string(index=False))
+```
+
+This output helps you choose the correct `--triples` and `--sr` flags when running `pipeline_runner.py`.
+
 ## Tips & Troubleshooting
 
 * Ensure metadata fields (`sample`, `region`, `area`, `cortical_depth`, `H1_annotation`) exist in your `.h5ad`.

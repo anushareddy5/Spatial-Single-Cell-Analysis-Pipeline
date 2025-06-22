@@ -33,7 +33,11 @@ def main():
     parser.add_argument('--sr', nargs='+', required=True,
                         help='List of SAMPLE-REGION strings')
     parser.add_argument('--genes', nargs='+', required=True)
+    parser.add_argument('--depth-col', default='cortical_depth',
+                        help="Column name in adata.obs to use for depth-violin plots")
     parser.add_argument('--out', default='results')
+    parser.add_argument('--spot-size', type=float, default=1.0,
+                        help="Spot size for spatial AP plots")
     args = parser.parse_args()
 
     # Create output dirs
@@ -47,6 +51,7 @@ def main():
             '--h5ad', h,
             *sum((['--triples', *t] for t in args.triples), []),
             '--genes', *args.genes,
+            '--depth-col', args.depth_col,
             '--output', args.out
         ])
 
@@ -54,6 +59,7 @@ def main():
             '--h5ad', h,
             '--samples', *args.sr,
             '--genes', *args.genes,
+            '--spot-size', str(args.spot_size),
             '--output', args.out
         ])
 
