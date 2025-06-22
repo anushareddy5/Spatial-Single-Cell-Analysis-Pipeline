@@ -11,19 +11,18 @@ import seaborn as sns
 import sys
 import logging
 
-# ----------------------------------------------------------------------
-# Setup logging
-# ----------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(asctime)s] %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
 
 def find_genes(adata, sample, region, area, depth_col):
     logging.info(
-        f"Finding genes for {sample}–{region}–{area} using depth column '{depth_col}'")
+        f"Finding genes for {sample}–{region}–{area} (depth=`{depth_col}`)")
     mask = (
         (adata.obs['sample'] == sample) &
         (adata.obs['region'] == region) &
@@ -31,13 +30,13 @@ def find_genes(adata, sample, region, area, depth_col):
         (~adata.obs[depth_col].isna()) &
         (adata.obs['H1_annotation'].isin(['EN-ET', 'EN-IT', 'EN-Mig']))
     )
-    ad = adata[mask].copy()
-    logging.info(f"  Subset: {ad.n_obs} cells × {ad.n_vars} genes")
+    sub = adata[mask].copy()
+    logging.info(f"  Subset size: {sub.n_obs} cells × {sub.n_vars} genes")
 
-    X = ad.X.toarray() if sparse.issparse(ad.X) else ad.X
+    X = sub.X.toarray() if sparse.issparse(sub.X) else sub.X
     df = pd.DataFrame({
-        'gene': np.repeat(ad.var_names, ad.n_obs),
-        'depth': np.tile(ad.obs[depth_col], ad.n_vars)
+        'gene': np.repeat(sub.var_names, sub.n_obs),
+        'depth': np.tile(sub.obs[depth_col], sub.n_vars)
     })
     ordered = list(df.groupby('gene')['depth'].median().sort_values().index)
     logging.info(f"  Ordered {len(ordered)} genes by median depth")
@@ -45,7 +44,7 @@ def find_genes(adata, sample, region, area, depth_col):
 
 
 def make_violin(adata, sample, region, area, genes, depth_col, out_dir):
-    logging.info(f"Making violin for {sample}–{region}–{area}")
+    logging.info(f"Making violin: {sample}–{region}–{area}")
     mask = (
         (adata.obs['sample'] == sample) &
         (adata.obs['region'] == region) &
@@ -72,42 +71,51 @@ def make_violin(adata, sample, region, area, genes, depth_col, out_dir):
 
 
 def main():
+    setup_logging()
     parser = argparse.ArgumentParser(
-        description="Generate depth-based violin plots")
-    parser.add_argument('--h5ad', required=True, help="Input AnnData (.h5ad)")
+        description="Generate cortical-depth violin plots"
+    )
+    parser.add_argument('--h5ad', required=True,
+                        help="Input AnnData (.h5ad)")
     parser.add_argument('--triples', nargs=3, action='append',
                         metavar=('SAMPLE', 'REGION', 'AREA'),
                         help="One or more SAMPLE REGION AREA triples")
     parser.add_argument('--genes', nargs='+',
-                        help="Gene list (skip auto-selection)")
+                        help="Explicit gene list; skips auto-selection")
     parser.add_argument('--depth-col', default='cortical_depth',
-                        help="Name of the depth column in `adata.obs`")
-    parser.add_argument('--output', default='.', help="Output directory")
+                        help="Column in `adata.obs` to use for depth")
+    parser.add_argument('--output', default='.',
+                        help="Directory for output PNGs")
     args = parser.parse_args()
-
     logging.info(f"Arguments: {args}")
 
-    # Load data
     logging.info(f"Loading AnnData from '{args.h5ad}'")
     adata = sc.read(args.h5ad)
-    logging.info(f"  Found obs columns: {list(adata.obs.columns)}")
+    logging.info(f"Available obs columns: {list(adata.obs.columns)}")
 
-    # Check depth column
+    # If depth column missing, skip gracefully
     if args.depth_col not in adata.obs.columns:
         logging.warning(
-            f"Depth column '{args.depth_col}' not found—skipping violin plots.")
+            f"Depth column '{args.depth_col}' not found; "
+            "skipping violin step."
+        )
         sys.exit(0)
 
-    # Determine genes to plot
+    # Gene list: either user-specified or derived
     if args.genes:
         genes = args.genes
-        logging.info(f"Using user-provided gene list ({len(genes)} genes)")
+        logging.info(f"Using provided gene list ({len(genes)} genes)")
     else:
         s, r, a = args.triples[0]
-        genes = find_genes(adata, s, r, a, args.depth_col)
+        try:
+            genes = find_genes(adata, s, r, a, args.depth_col)
+        except Exception as e:
+            logging.error(f"Error in find_genes: {e}")
+            logging.warning("Skipping violin step.")
+            sys.exit(0)
 
-    # Generate plots
-    for (s, r, a) in args.triples:
+    # Generate violins
+    for s, r, a in args.triples:
         make_violin(adata, s, r, a, genes, args.depth_col, args.output)
 
 
