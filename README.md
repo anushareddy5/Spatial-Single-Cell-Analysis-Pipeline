@@ -48,6 +48,8 @@ Each step reads the same AnnData object, subsets by the appropriate metadata fie
 
 ### 1. `depth_violin.py`
 
+**Optional**: `--depth-col` specifies which `adata.obs` column to use for depth (default: `cortical_depth`).
+
 Visualizes expression trends along cortical depth by generating violin plots for selected cell populations.
 
 ```bash
@@ -55,14 +57,17 @@ python depth_violin.py \
   --h5ad path/to/data.h5ad \
   --triples SAMPLE REGION AREA [--triples ...] \
   [--genes GENE1 GENE2 ...] \
+  [--depth-col <depth_column_name>]  # replace with the actual depth column in your data \
   [--output output_dir]
 ```
 
 * **Inputs**: AnnData `.h5ad`, one or more `SAMPLE REGION AREA` triples
-* **Optional**: `--genes` list; if omitted, genes are chosen by median-depth ordering
-* **Output**: PNG violin plot per triple
+* **Optional**:
 
----
+  * `--genes`: list of genes; if omitted, genes are auto-selected by median-depth ordering
+  * `--depth-col`: obs column name for depth (default `cortical_depth`)
+  * `--output`: output directory (default `.`)
+* **Output**: PNG violin plot per triple
 
 ### 2. `spatial_expression_plots.py`
 
@@ -78,11 +83,13 @@ python spatial_expression_plots.py \
   [--output output_dir]
 ```
 
-* **Inputs**: `.h5ad`, `SAMPLE-REGION` identifiers (e.g., `FB123-F1`), gene list
-* **Options**: `--cmap` (default `YlGnBu`), `--workers` for parallel plotting
-* **Output**: One PNG per (sample–region–gene)
+* **Inputs**: `.h5ad`, `SAMPLE-REGION` identifiers, gene list
+* **Options**:
 
----
+  * `--cmap`: Matplotlib colormap (default `YlGnBu`)
+  * `--workers`: number of parallel workers (default 8)
+  * `--output`: output directory (default `.`)
+* **Output**: PNG per sample–region–gene
 
 ### 3. `expression_heatmaps.py`
 
@@ -96,12 +103,12 @@ python expression_heatmaps.py \
   [--output output_dir]
 ```
 
-* **Scales**: Zero-centered, max-value clipped
-* **Plot**: Genes on y-axis, cells on x-axis
-
----
+* **Scales**: zero-centered, max-value clipped
+* **Plot**: genes on y-axis, cells on x-axis
 
 ### 4. `ap_spatial_plots.py`
+
+**Optional**: `--spot-size` sets the point size for spatial plots (default: `1.0`).
 
 Generates anterior–posterior spatial plots using Scanpy’s `spatial` for each gene.
 
@@ -110,10 +117,9 @@ python ap_spatial_plots.py \
   --h5ad path/to/data.h5ad \
   --samples SAMPLE-REGION [SAMPLE-REGION ...] \
   --genes GENE1 GENE2 ... \
+  [--spot-size size] \
   [--output output_dir]
 ```
-
----
 
 ### 5. `bubble_plot.R`
 
@@ -125,61 +131,95 @@ Rscript bubble_plot.R \
   --output path/to/bubble_plot.pdf
 ```
 
-* **Input CSV** must contain columns: gene/module, sample, region, value1 (size), value2 (color)
+* **Input CSV** must contain: gene/module, sample, region, value1 (size), value2 (color)
 * **Dependencies**: `ggplot2`, `reshape2`, `optparse`
-
----
 
 ### 6. `pipeline_runner.py`
 
-**Minimal one‑line example:**
+**Optional**: `--depth-col`, `--spot-size` flags default to `cortical_depth` and `1.0`.
 
-```bash
-python pipeline_runner.py --h5ads fileA.h5ad fileB.h5ad --triples SAMPLE REGION AREA --sr SAMPLE-REGION --genes GENE1 GENE2 GENE3 --out output_dir
-```
-
-Orchestrates the entire workflow by calling the above scripts in order for each `.h5ad`.
+**Minimal one-line example:**
 
 ```bash
 python pipeline_runner.py \
-  --h5ads fileA.h5ad fileB.h5ad ... \
+  --h5ads fileA.h5ad fileB.h5ad \
+  --triples SAMPLE REGION AREA \
+  --sr SAMPLE-REGION \
+  --genes GENE1 GENE2 GENE3 \
+  --depth-col <depth_column_name>  # replace with your actual depth-column \
+  --spot-size 1.0 \
+  --out output_dir
+```
+
+Orchestrates the full workflow:
+
+```bash
+python pipeline_runner.py \
+  --h5ads fileA.h5ad fileB.h5ad fileC.h5ad \
   --triples SAMPLE REGION AREA [--triples ...] \
   --sr SAMPLE-REGION [--sr ...] \
   --genes GENE1 GENE2 ... \
+  --depth-col <depth_column_name>  # replace with your actual depth-column \
+  --spot-size 1.0 \
   [--out output_dir]
 ```
-**Example:**
 
-```bash
-python pipeline_runner.py \
-  --h5ads gw18_umb1759.h5ad gw20_umb1031.h5ad gw21_umb1932.h5ad \
-  --triples FB123 F1 A-PFC \
-  --triples FB123 O2 A-Occi \
-  --sr FB123-F1 FB123-O2 \
-  --genes CBLN2 SRM RASGRF2 MYOG XYZ123 \
-  --out spatial_analysis_results
-```
+This runs:
 
-This single command will:
+1. Depth violins
+2. Spatial feature plots
+3. Expression heatmaps
+4. AP spatial plots
+5. (Optionally) bubble-plot in R
 
-1. Generate depth violins
-2. Produce spatial feature plots
-3. Draw expression heatmaps
-4. Create AP spatial plots
-5. (Optionally) run bubble-plot in R if summary CSV is provided
-
-Outputs are organized under `output_dir/` with clear filenames for each step.
+Outputs saved under `output_dir/`.
 
 ---
 
+## Checking Gene Presence and Identifying Sample–Region–Area Triples
+
+To ensure a gene is present in your `.h5ad` and to discover which sample–region–area combinations actually express it, run this Python snippet:
+
+```python
+import scanpy as sc
+import numpy as np
+
+# 1. Load your AnnData
+adata = sc.read("path/to/data.h5ad")
+
+# 2. Specify the gene to check
+gene = "PANX1"
+
+# 3. Verify the gene is in var_names
+if gene not in adata.var_names:
+    print(f"{gene} not found in this dataset.")
+else:
+    print(f"{gene} found. Identifying expressing cells...")
+    # 4. Subset to cells with expression > 0
+    expr = adata[:, gene].X
+    expr = expr.toarray().flatten() if hasattr(expr, "toarray") else expr.flatten()
+    cells_idx = np.where(expr > 0)[0]
+    adata_pos = adata[cells_idx].copy()
+    # 5. List unique sample-region-area triples
+    combos = adata_pos.obs[['sample','region','area']].drop_duplicates()
+    print("Sample–Region–Area combinations with", gene, "> 0:")
+    print(combos.to_string(index=False))
+```
+
 ## Tips & Troubleshooting
 
-* Ensure metadata fields (`sample`, `region`, `area`, `cortical_depth`, `H1_annotation`) exist in your `.h5ad`.
-* Adjust `--workers` down if memory is limited during spatial plotting.
-* Always specify `--genes` to fix gene order and avoid auto-selection.
+* Ensure metadata fields (`sample`, `region`, `area`, `cortical_depth`, `H1_annotation`) exist.
+* Adjust `--workers` down if memory is limited.
+* Always specify `--genes` to fix gene order.
+* Check available obs columns with `print(adata.obs.columns)` if depth-col warnings occur.
+* You can also list them directly using:
 
-*End of README*
+  ```python
+  import scanpy as sc
+  adata = sc.read("file.h5ad")
+  print(adata.obs.columns.tolist())
+  ```
 
 ## References
 
-[https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
+* [Original pipeline on GitHub](https://github.com/ShunzhouJiang/Spatial-Single-cell-Analysis-of-Human-Cortical-Layer-and-Area-Specification/tree/main/Fig3)
