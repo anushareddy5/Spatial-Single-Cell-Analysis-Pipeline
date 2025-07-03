@@ -205,6 +205,29 @@ else:
     print("Sample–Region–Area combinations with", gene, "> 0:")
     print(combos.to_string(index=False))
 ```
+### 7. `plot_zscore_panx1.py`
+
+This script generates a spatial plot of PANX1 expression z-scores for each cell in your `.h5ad` dataset. It allows you to visualize the standardized expression of PANX1 across spatial coordinates, with options to subset by sample, region, or area.
+
+```bash
+python plot_zscore_panx1.py \
+  --h5ad path/to/data.h5ad \
+  [--output output_dir] \
+  [--cmap Colormap] \
+  [--sample SAMPLE] \
+  [--region REGION] \
+  [--area AREA]
+```
+
+- **Inputs:** AnnData `.h5ad` file
+- **Options:**
+  - `--output`: Output directory (default: `.`)
+  - `--cmap`: Matplotlib colormap (default: `coolwarm`)
+  - `--sample`, `--region`, `--area`: Subset by metadata (optional)
+- **Output:** PNG plot showing the spatial distribution of PANX1 z-score
+
+**Usage notes:**  
+Make sure your `.h5ad` file contains the `PANX1` gene and appropriate spatial coordinates in `obsm['spatial']` or in `obs['x']`/`obs['y']`.
 
 ## Tips & Troubleshooting
 
