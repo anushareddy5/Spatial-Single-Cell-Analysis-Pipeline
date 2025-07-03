@@ -229,6 +229,19 @@ python plot_zscore_panx1.py \
 **Usage notes:**  
 Make sure your `.h5ad` file contains the `PANX1` gene and appropriate spatial coordinates in `obsm['spatial']` or in `obs['x']`/`obs['y']`.
 
+### 8. `plot_panx1_H1_all5.py`
+
+This script visualizes the relative expression of PANX1 across different H1 annotation groups and brain lobes over gestational weeks. It produces two PDF figures:
+
+- **PANX1_H1_all5.pdf**: Average PANX1 expression across all lobes for each H1 group, plotted over gestational week.
+- **PANX1_H1_byLobe_all5.pdf**: PANX1 expression split by lobe for each H1 group, also plotted over gestational week.
+
+The script supports min-max scaling within groups and uses customizable color and line styles for clarity.
+
+**Usage notes:**
+- Make sure your input files and metadata match the script’s expectations for H1 group and lobe annotations.
+- The output PDFs will be saved in the working directory.
+
 ## Tips & Troubleshooting
 
 * Ensure metadata fields (`sample`, `region`, `area`, `cortical_depth`, `H1_annotation`) exist.
